@@ -4,5 +4,7 @@ class MetaDB:
     '''
         This class provides ready functions for pickleDB usage
     '''
-    def __init__(self):
-        pass
+    def __init__(self, load_path):
+        self.db = pickledb.load(load_path, False)
+
+    def 
