@@ -4,7 +4,7 @@ import numpy as np
 from SSH.ssh_detector import SSHDetector
 from mtcnn_detector import MtcnnDetector
 
-class PhotoAnalysis:
+class VectorExtractor:
     '''
         This class provides functionality for retrieving descriptors for each face in image
     '''
