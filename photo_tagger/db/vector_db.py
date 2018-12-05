@@ -51,8 +51,8 @@ class FaissEngine:
             return True
 
     def range_search(self, vector, distance):
-        indexes, distances = self.index.range_search(vector.reshape((1, -1)), distance)
-        return indexes
+        lims, indexes, distances = self.index.range_search(vector.reshape((1, -1)), distance)
+        return indexes[lims[0]:lims[1]]
 
     def search(self, vector, k):
         indexes, distances = self.index.search(vector.reshape((1, -1)), k)

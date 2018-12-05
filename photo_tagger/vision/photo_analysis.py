@@ -9,10 +9,10 @@ class VectorExtractor:
         This class provides functionality for retrieving descriptors for each face in image
     '''
     def __init__(self, recognition_model_path, ssh_model_path,
-                    mtccn_model_path, scales, detection_threshold):
+                    mtcnn_model_path, scales, detection_threshold):
         self.extractor = Embedding(recognition_model_path, 0)
         self.detector = SSHDetector(ssh_model_path, 0)
-        self.mtcnn_detector = MtcnnDetector(mtccn_model_path)
+        self.mtcnn_detector = MtcnnDetector(mtcnn_model_path)
         self.scales = scales
         self.detection_threshold = detection_threshold
         

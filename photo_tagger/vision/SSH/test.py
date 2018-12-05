@@ -28,6 +28,7 @@ if im_size_min>target_size or im_size_max>max_size:
       im_scale = float(max_size) / float(im_size_max)
   img = cv2.resize(img, None, None, fx=im_scale, fy=im_scale)
   print('resize to', img.shape)
+
 for i in range(t-1): #warmup
   faces = detector.detect(img)
 timea = datetime.datetime.now()
