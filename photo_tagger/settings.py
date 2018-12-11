@@ -14,5 +14,7 @@ detection_threshold = 0.5
 #TODO
 texts = {
     'hello': '',
-    'bad_selfie': ''
+    'bad_selfie': '',
+    'auth_failed': '',
+    'accepted_selfie': ''
 }

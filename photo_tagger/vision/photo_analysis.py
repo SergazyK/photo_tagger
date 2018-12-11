@@ -42,6 +42,8 @@ class VectorExtractor:
     def retrieve(self, img_path):
         img = cv2.imread(img_path)
         img = self._preprocess(img)
+        cv2.imwrite(img_path, img)
+        
         faces = self._detect(img)
 
         vectors = []

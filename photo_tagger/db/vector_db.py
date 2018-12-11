@@ -56,4 +56,4 @@ class FaissEngine:
 
     def search(self, vector, k):
         indexes, distances = self.index.search(vector.reshape((1, -1)), k)
-        return indexes
+        return indexes, distances
