@@ -40,7 +40,13 @@ class TelegramBot:
     def __init__(self):
         pass
 
-    def message_handler(self):
+    def send_message(self):
+        pass
+
+    def send_photo(self):
+        pass
+
+    def get_name(self):
         pass
 
 class Distributor:
@@ -48,7 +54,8 @@ class Distributor:
         Bot logic
     """
     def __init__(self, info_db_path, faces_db_path, photo_db_path, frontend):
-        self.db = meta_db.MetaDB(info_db_path)
+        self.db = meta_db.DumbDB()
+        self.db.load(info_db_path)
         self.faces_db = vector_db.FaissEngine()
         self.faces_db.load(faces_db_path)
         self.photo_db = vector_db.FaissEngine()

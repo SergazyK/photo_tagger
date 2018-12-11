@@ -17,9 +17,9 @@ class FaissEngine:
         self.db_path = db_path
         try:
             self.index = faiss.read_index(db_path)
-            loggin.info('faiss load success at path: ' + db_path)
+            logging.info('faiss load success at path: ' + db_path)
         except:
-            logging.error('Unable to load faiss index at path: ' + db_path)
+            logging.error('Unable to load faiss index at path: ' + db_path + '\n Starts from new index')
 
     @utils.SingleExec()
     def dump(self, db_path=None):
@@ -27,6 +27,7 @@ class FaissEngine:
             if db_path is None:
                 faiss.write_index(self.index, self.db_path)
             else:
+                self.db_path = db_path
                 faiss.write_index(self.index, db_path)
             logging.info('faiss dump success at path: ' + db_path)
         except:
