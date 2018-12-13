@@ -22,9 +22,9 @@ class SyncOp(contextlib.ContextDecorator):
 def sync(fn):
     def wrapped(outer_self, *args, **kwargs):
         outer_self.lock.acquire()
-        outer_self.db.load()
+        outer_self.load()
         result = fn(outer_self, *args, **kwargs)
-        outer_self.db.dump()
+        outer_self.dump()
         outer_self.lock.release()
         return result
     return wrapped

@@ -1,6 +1,6 @@
 import faiss
-from ... import settings
-from ... import utils
+import settings
+import utils
 import numpy as np
 import logging
 
@@ -10,7 +10,7 @@ class FaissEngine:
     '''
     def __init__(self):
         self.index = faiss.IndexFlatL2(settings.descriptor_size)
-        logging.ingo('FaissEngine init ...')
+        logging.info('FaissEngine init ...')
 
     @utils.SingleExec()
     def load(self, db_path):
@@ -37,6 +37,7 @@ class FaissEngine:
     def add(self, vector):
         try:
             self.index.add(vector.reshape((1, -1)))
+            self.dump()
             return self.index.ntotal - 1
         except Exception as e:
             logging.error('exception text: ' + str(e))
@@ -46,6 +47,7 @@ class FaissEngine:
     def remove(self, vector_id):
         if vector_id < 0 or vector_id >= index.ntotal:
             logging.error('incorrect vector_id for faiss index removal')
+            self.dump()
             return False
         else:
             self.index.remove_ids(np.asarray([vector_id]))

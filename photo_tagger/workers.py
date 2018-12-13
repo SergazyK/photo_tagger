@@ -1,29 +1,34 @@
 import pickle
-from multiprocesing import Queue, Process
+from multiprocessing import Queue, Process
 from vision.photo_analysis import VectorExtractor
 from db import meta_db, vector_db
 import settings
 
+import logging
+import uuid
+import time
+import os
+
 import telegram
+from telegram.utils import request
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 from telegram.ext.dispatcher import run_async
-import logging
-import uuid
+
 
 class VisionWorker:
     def __init__(self):
         self.task_queue = Queue()
         self.done_queue = Queue()
-        self.process = Process(target=self.work, args=(task_queue, done_queue))
+        self.process = Process(target=self.work, args=(self.task_queue, self.done_queue))
         self.process.start()
 
     def work(self, task_queue, done_queue):
         recognition_model_path = settings.recognition_model_path
         ssh_model_path = settings.ssh_model_path
         mtcnn_model_path = settings.mtcnn_model_path
-        scales = settings.sacles
+        scales = settings.scales
         detection_threshold = settings.detection_threshold
         extractor = VectorExtractor(recognition_model_path, ssh_model_path,
                     mtcnn_model_path, scales, detection_threshold)
@@ -45,7 +50,7 @@ class TelegramBot:
     """
         Bot frontend for telegram, entrypoint
     """
-    def __init__(self, distributor):
+    def __init__(self, distributor, photo_storage_path):
 
         bot = telegram.Bot(token=settings.token)
         self.bot = bot
@@ -54,9 +59,9 @@ class TelegramBot:
         self.updater = Updater(token = settings.token, workers = 10)
         dispatcher = self.updater.dispatcher
 
+        distributor.set_frontend(self)
+
         def start(bot, update):
-            #todo: init user, set name
-            #dist.init_user(update.message.chat_id, str(update.message.from_user.username))
             bot.send_message(chat_id=update.message.chat_id, text=settings.texts['hello'])
 
         def handle_text_message(bot, update):
@@ -66,7 +71,7 @@ class TelegramBot:
         def handle_photo(bot, update):
             file_id = update.message.photo[-1]
             newFile = bot.get_file(file_id)
-            unique_str = "photos/" + str(uuid.uuid4())
+            unique_str = photo_storage_path + str(uuid.uuid4())
             newFile.download(unique_str)
             os.rename(unique_str, unique_str + '.jpg')
             unique_str += '.jpg'
@@ -81,17 +86,24 @@ class TelegramBot:
         dispatcher.add_handler(handle_photo_handler)
 
 
-    def send_message(self, chat_id, text):
-        #todo add retries
-        self.bot.send_message(chat_id=chat_id, text=text)
+    def send_message(self, chat_id, text, retries = 10):
+        if retries == 0:
+            return
+        try:
+            self.bot.send_message(chat_id=chat_id, text=text)
+        except:
+            time.sleep(1*2**(10 - retries))
+            self.send_message(chat_id, text, retries = retries - 1)
 
-    def send_photo(self, photo_path, chat_id, text):
-        #todo add retries
-        #todo: add text as caption
-        with open(photo_path, 'rb') as photo:
-            self.bot.send_photo(chat_id=chat_id, photo=photo)
-        
-        self.bot.send_message(chat_id=chat_id, text=text)
+    def send_photo(self, photo_path, chat_id, text, retries = 10):
+        if retries == 0:
+            return
+        try:
+            with open(photo_path, 'rb') as photo:
+                self.bot.send_photo(chat_id=chat_id, photo=photo, caption=text)
+        except:
+            time.sleep(3*2**(10 - retries))
+            self.send_photo(photo_path, chat_id, text, retries - 1)
 
     def start(self):
         self.updater.start_polling()
@@ -101,7 +113,7 @@ class Distributor:
     """
         Bot logic
     """
-    def __init__(self, info_db_path, faces_db_path, photo_db_path, frontend):
+    def __init__(self, info_db_path, faces_db_path, photo_db_path):
         self.db = meta_db.DumbDB(info_db_path)
         self.db.load()
         self.faces_db = vector_db.FaissEngine()
@@ -109,10 +121,11 @@ class Distributor:
         self.photo_db = vector_db.FaissEngine()
         self.photo_db.load(photo_db_path)
         self.vision_worker = VisionWorker()
-        self.write_worker = Process(target=self.work, args=(self.vision_worker))
+        self.write_worker = Process(target=self.work, args=(self.vision_worker, ))
         self.write_worker.start()
+
+    def set_frontend(self, frontend):
         self.frontend = frontend
-        self.frontend.set_photo_handler(posted_photo)
 
     def photo_handler(self, chat_id, file_path, username_firstname):
         user_id = None
@@ -158,7 +171,7 @@ class Distributor:
         self.frontend.send_photo(self.db.get_photo_path(photo_id),
             self.db.get_chat(tagged_user_id), tag_string)
 
-    def start(self, vision_worker):
+    def work(self, vision_worker):
         while True:
             photo_id, vectors = vision_worker.get_done_task()
             user_id = self.db.get_sender(photo_id)

@@ -1,8 +1,11 @@
-from ... import utils
+import utils
 import cv2
 import numpy as np
-from SSH.ssh_detector import SSHDetector
-from mtcnn_detector import MtcnnDetector
+import sys
+sys.path.append('vision/SSH/')
+from ssh_detector import SSHDetector
+from vision.mtcnn_detector import MtcnnDetector
+from vision.embedding import Embedding
 
 class VectorExtractor:
     '''
@@ -35,7 +38,7 @@ class VectorExtractor:
         face_rects = self.detector.detect(image, threshold = self.detection_threshold)
         return face_rects
 
-    @uitls.SingleExec()
+    @utils.SingleExec()
     def _predict(self, img, landmarks):
         return self.extractor.get(img, landmarks)
 
