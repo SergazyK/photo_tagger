@@ -9,11 +9,12 @@ mtcnn_model_path = 'vision/mtcnn-model/'
 scales = [1200, 1600]
 detection_threshold = 0.5
 
-
+#telegram
+token = ''
 
 #TODO
 texts = {
-    'hello': '',
+    'hello': 'Hi! I am photo sharing bot. Please send me your selfie to retrieve your photos. Then you can send and receive photos.',
     'bad_selfie': '',
     'auth_failed': '',
     'accepted_selfie': ''

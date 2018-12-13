@@ -4,6 +4,14 @@ from vision.photo_analysis import VectorExtractor
 from db import meta_db, vector_db
 import settings
 
+import telegram
+from telegram.ext import Updater
+from telegram.ext import CommandHandler
+from telegram.ext import MessageHandler, Filters
+from telegram.ext.dispatcher import run_async
+import logging
+import uuid
+
 class VisionWorker:
     def __init__(self):
         self.task_queue = Queue()
@@ -37,25 +45,65 @@ class TelegramBot:
     """
         Bot frontend for telegram, entrypoint
     """
-    def __init__(self):
-        pass
+    def __init__(self, distributor):
 
-    def send_message(self):
-        pass
+        bot = telegram.Bot(token=settings.token)
+        self.bot = bot
+        request.CON_POOL_SIZE = 10
 
-    def send_photo(self):
-        pass
+        self.updater = Updater(token = settings.token, workers = 10)
+        dispatcher = self.updater.dispatcher
 
-    def get_name(self):
-        pass
+        def start(bot, update):
+            #todo: init user, set name
+            #dist.init_user(update.message.chat_id, str(update.message.from_user.username))
+            bot.send_message(chat_id=update.message.chat_id, text=settings.texts['hello'])
+
+        def handle_text_message(bot, update):
+            bot.send_message(chat_id=update.message.chat_id, text="Send me photos, not text. I am not Siri")
+
+
+        def handle_photo(bot, update):
+            file_id = update.message.photo[-1]
+            newFile = bot.get_file(file_id)
+            unique_str = "photos/" + str(uuid.uuid4())
+            newFile.download(unique_str)
+            os.rename(unique_str, unique_str + '.jpg')
+            unique_str += '.jpg'
+            distributor.photo_handler(update.message.chat_id, unique_str,
+                [str(update.message.from_user.username), update.message.from_user.first_name, str(update.message.from_user.first_name)])
+
+
+        start_handler = CommandHandler('start', start)
+        dispatcher.add_handler(start_handler)
+
+        handle_photo_handler = MessageHandler(Filters.photo, handle_photo)
+        dispatcher.add_handler(handle_photo_handler)
+
+
+    def send_message(self, chat_id, text):
+        #todo add retries
+        self.bot.send_message(chat_id=chat_id, text=text)
+
+    def send_photo(self, photo_path, chat_id, text):
+        #todo add retries
+        #todo: add text as caption
+        with open(photo_path, 'rb') as photo:
+            self.bot.send_photo(chat_id=chat_id, photo=photo)
+        
+        self.bot.send_message(chat_id=chat_id, text=text)
+
+    def start(self):
+        self.updater.start_polling()
+
 
 class Distributor:
     """
         Bot logic
     """
     def __init__(self, info_db_path, faces_db_path, photo_db_path, frontend):
-        self.db = meta_db.DumbDB()
-        self.db.load(info_db_path)
+        self.db = meta_db.DumbDB(info_db_path)
+        self.db.load()
         self.faces_db = vector_db.FaissEngine()
         self.faces_db.load(faces_db_path)
         self.photo_db = vector_db.FaissEngine()
@@ -66,11 +114,15 @@ class Distributor:
         self.frontend = frontend
         self.frontend.set_photo_handler(posted_photo)
 
-    def photo_handler(self, chat_id, file_path):
+    def photo_handler(self, chat_id, file_path, username_firstname):
         user_id = None
 
         if self.db.get_user(chat_id) is None:
-            user_id = self.db.new_user(chat_id)
+            username = 'Unknown'
+            for cand in username_firstname[::-1]:
+                if len(cand) > 1:
+                    username = cand
+            user_id = self.db.new_user(chat_id, username)
         else:
             user_id = self.db.get_user(chat_id)
 
@@ -97,16 +149,16 @@ class Distributor:
         sender_id = self.db.get_sender(photo_id)
         tags = list(self.db.get_tags(photo_id))
         tag_string = 'Sent by'
-        tag_string += self.frontend.get_name(self.db.get_chat(sender_id))
+        tag_string += self.db.get_username(sender_id)
         tag_string += '\n Tagged:'
 
         for user_id in tag_string:
-            tag_string += ' ' + self.frontend.get_name(self.db.get_chat(user_id))
+            tag_string += ' ' + self.db.get_username(user_id)
         
         self.frontend.send_photo(self.db.get_photo_path(photo_id),
             self.db.get_chat(tagged_user_id), tag_string)
 
-    def work(self, vision_worker):
+    def start(self, vision_worker):
         while True:
             photo_id, vectors = vision_worker.get_done_task()
             user_id = self.db.get_sender(photo_id)
@@ -144,4 +196,5 @@ class Distributor:
                             self.db.add_tag_to_photo(photo_id, tagged_id)
                 
                 for photo_id, tagged_id in recognized:
-                    self.send_photo(photo_id, tagged_id)
+                    if tagged_id != user_id:
+                        self.send_photo(photo_id, tagged_id)
