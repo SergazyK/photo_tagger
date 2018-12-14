@@ -18,22 +18,22 @@ print(index.is_trained)
 index.add(xb)                  # add vectors to the index
 print(index.ntotal)
 print(index.is_trained)
-print("Time to build:", time.time() - start)
+print('Time to build:', time.time() - start)
 
 for _ in range(10):
     start2 = time.time()
     index.add(xb[0].reshape((1, -1)))
-    print("Time to add:", time.time() - start2)
+    print('Time to add:', time.time() - start2)
 
 
 k = 4                          # we want to see 4 nearest neighbors
-D, I = index.search(xb[:5], k) # sanity check
+D, I = index.search(xb[0].reshape((1, -1)), k) # sanity check
 print(I)
 print(D)
-print("actual search:")
+print('actual search:')
 start = time.time()
 D, I = index.search(xq, k)     # actual search
-print("Time to search batch:", time.time() - start)
+print('Time to search batch:', time.time() - start)
 print(I[:5])                   # neighbors of the 5 first queries
 print(I[-5:])                  # neighbors of the 5 last queries
 

@@ -11,4 +11,5 @@ logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:
 if __name__ == '__main__':
     distributor = Distributor('data/meta.db', 'data/faces.faiss', 'data/photos.faiss')
     frontend = TelegramBot(distributor, "data/photos/")
+    frontend.manual_add(178150010, '/home/zhan/photos/*')
     frontend.start()

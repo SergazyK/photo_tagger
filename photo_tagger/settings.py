@@ -1,5 +1,5 @@
 descriptor_size = 512
-strong_verification_threshold = 1
+strong_verification_threshold = 1.14
 weak_verification_treshold = 1.24
 
 # Face detection and recognition

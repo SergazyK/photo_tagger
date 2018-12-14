@@ -6,6 +6,9 @@ sys.path.append('vision/SSH/')
 from ssh_detector import SSHDetector
 from vision.mtcnn_detector import MtcnnDetector
 from vision.embedding import Embedding
+import logging
+
+
 
 class VectorExtractor:
     '''
@@ -44,12 +47,17 @@ class VectorExtractor:
 
     def retrieve(self, img_path):
         img = cv2.imread(img_path)
+
         img = self._preprocess(img)
+
         cv2.imwrite(img_path, img)
         
+        print(img.shape)
         faces = self._detect(img)
+        print("faces: " + str(len(faces)))
 
         vectors = []
+
 
         for face in faces:
             w = face[2] - face[0]
@@ -87,4 +95,6 @@ class VectorExtractor:
 
         return vectors
 
-        
+if __name__ == '__main__':
+    model = VectorExtractor('models/model-r100-ii/model', 'SSH/model/e2ef', 'mtcnn-model/', [1200, 1600], 0.5)
+    model.retrieve('../data/photos/72e3ca67-3a61-4b45-bdab-01e500ba66c7.jpg')

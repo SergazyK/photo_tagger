@@ -21,11 +21,8 @@ class SyncOp(contextlib.ContextDecorator):
 
 def sync(fn):
     def wrapped(outer_self, *args, **kwargs):
-        outer_self.lock.acquire()
-        outer_self.load()
-        result = fn(outer_self, *args, **kwargs)
-        outer_self.dump()
-        outer_self.lock.release()
+        with outer_self.lock:
+            result = fn(outer_self, *args, **kwargs)
         return result
     return wrapped
  
@@ -38,7 +35,8 @@ class DumbDB:
         self.db = {'chats': {}, 'users': {}, 'photos': {}, 'photo_vectors': {}, 'user_vectors': {}, 'num_users': 0, 'num_photos': 0}
         self.lock = threading.Lock()
         self.load_path = load_path
-    
+
+    @sync
     def load(self, load_path = None):
         if load_path is not None:
             self.load_path = load_path
@@ -49,6 +47,7 @@ class DumbDB:
         except:
             logging.error("Couldn't load meta db, starting from scratch")
 
+    @sync
     def dump(self):
         with open(self.load_path, 'wb') as file:
             pickle.dump(self.db, file)
@@ -60,7 +59,7 @@ class DumbDB:
         '''
         user_id = self.db['num_users']
         self.db['chats'][chat_id] = {'user': user_id}
-        self.db['users'][user_id] = {'chat': chat_id, 'avatar': None, 'username': username}
+        self.db['users'][user_id] = {'chat': chat_id, 'avatar': -1, 'username': username}
         self.db['num_users'] += 1
         return user_id
 
@@ -74,6 +73,7 @@ class DumbDB:
         self.db['num_photos'] += 1
         return photo_id
 
+    @sync
     def get_user(self, chat_id):
         '''
             get user id
@@ -84,6 +84,7 @@ class DumbDB:
 
         return self.db['chats'][chat_id]['user']
 
+    @sync
     def get_vector(self, user_id):
         '''
             get vector id of user by user id
@@ -112,7 +113,7 @@ class DumbDB:
 
         self.db['users'][user_id]['avatar'] = photo_id
 
-
+    @sync
     def get_avatar(self, user_id):
         '''
             get photo id of user avatar
@@ -123,7 +124,7 @@ class DumbDB:
 
         return self.db['users'][user_id]['avatar']
 
-
+    @sync
     def get_photo_by_vector(self, index):
         '''
             get photo id from vector id
@@ -163,10 +164,11 @@ class DumbDB:
         '''
         if photo_id not in self.db['photos']:
             logging.warn('There is no such photo with photo_id:' + str(photo_id))
-            return set(-1)
+            return set([-1])
 
         return self.db['photos'][photo_id]['tags']
 
+    @sync
     def get_chat(self, user_id):
         '''
             get chat identifier for given user
@@ -177,6 +179,7 @@ class DumbDB:
 
         return self.db['users'][user_id]['chat']
 
+    @sync
     def get_photo_path(self, photo_id):
         '''
             get path in filesystem for given photo
@@ -210,15 +213,17 @@ class DumbDB:
         
         self.db['photo_vectors'][vector_id] = photo_id
 
+    @sync
     def get_user_by_vector(self, vector_id):
         '''
             get user id by vector_id
         '''
-        if user_id not in self.db['users']:
-            logging.error('There is no such user with user_id:' + str(user_id))
+        if vector_id not in self.db['user_vectors']:
+            logging.error('There is no such user with vector_id:' + str(vector_id))
             return -1
 
         return self.db['user_vectors'][vector_id]
 
+    @sync
     def get_username(self, user_id):
         return self.db['users'][user_id]['username']

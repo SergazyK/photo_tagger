@@ -2,7 +2,7 @@ import cv2
 import sys
 import numpy as np
 import datetime
-#sys.path.append('.')
+sys.path.append('.')
 from ssh_detector import SSHDetector
 
 scales = [1200, 1600]
@@ -11,7 +11,7 @@ t = 2
 detector = SSHDetector('./model/e2ef', 0)
 
 
-f = '../sample-images/t1.jpg'
+f = '../sample-images/t1.png'
 if len(sys.argv)>1:
   f = sys.argv[1]
 img = cv2.imread(f)

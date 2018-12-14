@@ -29,15 +29,14 @@ class FaissEngine:
             else:
                 self.db_path = db_path
                 faiss.write_index(self.index, db_path)
-            logging.info('faiss dump success at path: ' + db_path)
+            logging.info('faiss dump success at path: ' + str(self.db_path))
         except:
-            logging.error('faiss dump failed at path: ' + db_path)
+            logging.error('faiss dump failed at path: ' + str(self.db_path))
 
     @utils.SingleExec()
     def add(self, vector):
         try:
             self.index.add(vector.reshape((1, -1)))
-            self.dump()
             return self.index.ntotal - 1
         except Exception as e:
             logging.error('exception text: ' + str(e))
@@ -47,16 +46,15 @@ class FaissEngine:
     def remove(self, vector_id):
         if vector_id < 0 or vector_id >= index.ntotal:
             logging.error('incorrect vector_id for faiss index removal')
-            self.dump()
             return False
         else:
             self.index.remove_ids(np.asarray([vector_id]))
             return True
 
     def range_search(self, vector, distance):
-        lims, indexes, distances = self.index.range_search(vector.reshape((1, -1)), distance)
+        lims, distances, indexes = self.index.range_search(vector.reshape((1, -1)), distance)
         return indexes[lims[0]:lims[1]]
 
     def search(self, vector, k):
-        indexes, distances = self.index.search(vector.reshape((1, -1)), k)
-        return indexes, distances
+        distances, indexes = self.index.search(vector.reshape((1, -1)), k)
+        return distances, indexes
